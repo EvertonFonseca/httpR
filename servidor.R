@@ -53,14 +53,14 @@ openService <- function(callback){
         wkb     <- content(request, "text")
         
         #send request to callback
-        syscronize$producer$fireCall(name = 'futuroFunction',list(url = config$url,wkb = data,time = Sys.time()))
+        syscronize$producer$fireCall(name = 'futuroFunction',list(url = config$url,wkb = wkb,time = Sys.time()))
         
         #check if service was stoped
         interruptor$execInterrupts()
         
       },error = function(e){
         running <<- FALSE
-        message   <<- e
+        message <<- e
       })
  
      
