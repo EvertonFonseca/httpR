@@ -24,7 +24,7 @@ printf <- function(...){ print(paste0(...))}
 # Create function service
 openService <- function(callback){
   
-  if(!is.null(interruptor)) return(FALSE)
+  if(!is.null(interruptor)) return(invisible(NULL))
   
   interruptor <<- ipc::AsyncInterruptor$new()
   syscronize  <<- ipc::queue()
@@ -36,9 +36,9 @@ openService <- function(callback){
   config  <- fromJSON('config.json')
   
   printf("Http url: ",config$url)
-
+  
+  #make new future
   future({
-    
     message   <- ''
     running   <- TRUE
     
@@ -62,21 +62,18 @@ openService <- function(callback){
         running <<- FALSE
         message <<- e
       })
- 
-     
+      
     })
     #print message
-    message
-    
-  })%...>%(function(x) printf(x))
+    message })%...>%(function(x) printf(x))
   
-  return(TRUE)
+  return(invisible(NULL))
 }
 
 # Create function stop service
 stopService <- function(){
   
-  if(is.null(interruptor)) return(FALSE)
+  if(is.null(interruptor)) return(invisible(NULL))
   
   #stop
   interruptor$interrupt('Service was stopped with success!')
@@ -86,7 +83,7 @@ stopService <- function(){
   interruptor <<- NULL
   syscronize  <<- NULL
   
-  return(TRUE)
+  return(invisible(NULL))
 }
 
 # Run service
