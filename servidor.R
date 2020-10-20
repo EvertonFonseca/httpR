@@ -79,7 +79,7 @@ stopService <- function(){
   if(is.null(interruptor)) return(FALSE)
   
   #stop
-  interruptor$interrupt('Stop')
+  interruptor$interrupt('Service was stopped with success!')
   syscronize$consumer$stop()
   syscronize$destroy()
   
