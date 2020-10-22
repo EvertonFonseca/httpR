@@ -36,7 +36,7 @@ server <- function(){
         geometry.union <- st_union(st_cast(st_as_sf(readWKT(wkb_wkt(bytes))),to = 'POLYGON'))
         new.wkb        <- toupper(paste0(st_as_binary(geometry.union),collapse = ''))
         #Send new object WKB UNION
-        writeLines(wkb,con)
+        writeLines(new.wkb,con)
         
       })
       
