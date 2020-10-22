@@ -14,90 +14,36 @@ library(rgeos)
 #R working with multithreads
 plan(multisession)
 
-#var global
-interruptor <- NULL
-syscronize  <- NULL
-
 #Create function output
 printf <- function(...){ print(paste0(...))}
 
-# Create function service
-openService <- function(callback){
-  
-  if(!is.null(interruptor)) return(invisible(NULL))
-  
-  interruptor <<- ipc::AsyncInterruptor$new()
-  syscronize  <<- ipc::queue()
-  syscronize$consumer$start(100)
-  
-  #neutro function
-  futuroFunction <- function(x){callback(x)}
+server <- function(){
   
   config  <- fromJSON('config.json')
   
-  printf("Http url: ",config$url)
-  
-  #make new future
-  future({
-    message   <- ''
-    running   <- TRUE
+  while(TRUE){
     
-    repeat({
-      
-      if(!running)
-          break
-      
-       tryCatch({
-       
-        request <- httr::GET(str_trim(config$url),accept('text/plain'))
-        wkb     <- content(request, "text")
+    printf("Listening...")
+    
+    con    <- socketConnection(host=config$host, port = config$port, blocking=TRUE,server=TRUE, open="r+")
+    bytes  <- readLines(con,1)
+    
+    while(length(bytes) != 0)
+    { 
+      #make new future
+      future({
         
-        #send request to callback
-        syscronize$producer$fireCall(name = 'futuroFunction',list(url = config$url,wkb = wkb,time = Sys.time()))
+        geometry.union <- st_union(st_cast(st_as_sf(readWKT(wkb_wkt(bytes))),to = 'POLYGON'))
+        new.wkb        <- toupper(paste0(st_as_binary(geometry.union),collapse = ''))
+        #Send new object WKB UNION
+        writeLines(new.wkb,con)
         
-        #check if service was stoped
-        interruptor$execInterrupts()
-        
-      },error = function(e){
-        running <<- FALSE
-        message <<- e
       })
       
-    })
-    #print message
-    message })%...>%(function(x) printf(x))
-  
-  return(invisible(NULL))
+      bytes <- readLines(con,n = 1)
+    }
+    close(con)
+  }
 }
 
-# Create function stop service
-stopService <- function(){
-  
-  if(is.null(interruptor)) return(invisible(NULL))
-  
-  #stop
-  interruptor$interrupt('Service was stopped with success!')
-  syscronize$consumer$stop()
-  syscronize$destroy()
-  
-  interruptor <<- NULL
-  syscronize  <<- NULL
-  
-  return(invisible(NULL))
-}
-
-# Run service
-openService(function(obj){ # callback request
-  
-  #make new future
-  future({
-    
-    geometry.union <- st_union(st_cast(st_as_sf(readWKT(wkb_wkt(obj$wkb))),to = 'POLYGON'))
-    new.wkb        <- toupper(paste0(st_as_binary(geometry.union),collapse = ''))
-    #Send new object WKB UNION
-    httr::POST(obj$url,accept('text/plain'),body = new.wkb)
-    
-  })
-  
-})
-
+server()
